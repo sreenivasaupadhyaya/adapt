@@ -109,6 +109,7 @@ and V. Lempitsky. "Domain-adversarial training of neural networks". In JMLR, 201
                  copy=True,
                  random_state=None,
                  **params):
+        print('inside init1')
         
         if "gamma" in params:
             warnings.warn("the `gamma` argument has been removed from DANN."
@@ -121,11 +122,30 @@ and V. Lempitsky. "Domain-adversarial training of neural networks". In JMLR, 201
         kwargs.update(params)
         super().__init__(**kwargs)
 
-        
+    def _unpack_data2(self, data):
+        print("unpack data 2")
+        data_src = data[0]
+        data_tgt = data[1]
+        Xs = data_src[0]
+        ys,ys2 = data_src[1]
+        print(data_src)
+        print(data_tgt)
+        print("up1")
+        if  isinstance(data_tgt, tuple):
+            print("up2")
+            Xt = data_tgt[0]
+            yt,yt2 = data_tgt[1]
+            return Xs, Xt, (ys,ys2), (yt,yt2)
+        else:
+            print("up3")
+            Xt = data_tgt[0]
+            yt,yt2 = data_tgt[1]
+            return Xs, Xt, ys, None    
     def train_step(self, data):
         # Unpack the data.
-        Xs, Xt, ys, yt = self._unpack_data(data)
-       
+        # Xs, Xt, ys, yt= self._unpack_data(data)
+        Xs, Xt, (ys,ys2), (yt,yt2)= self._unpack_data2(data)
+        print('1:',Xs.shape, Xt.shape, ys.shape, ys2.shape,yt.shape, yt2.shape)
         # loss
         with tf.GradientTape() as task_tape, tf.GradientTape() as enc_tape, tf.GradientTape() as disc_tape:
             # Forward pass
@@ -140,19 +160,29 @@ and V. Lempitsky. "Domain-adversarial training of neural networks". In JMLR, 201
             ys_pred = tf.reshape(ys_pred, tf.shape(ys))
             
             # Compute the loss value
+            print('3:', ys.shape, ys_pred.shape)
             task_loss = self.task_loss_(ys, ys_pred)
-            
-            disc_loss = (-tf.math.log(ys_disc + EPS)
-                         -tf.math.log(1-yt_disc + EPS))
+            if 1:
+                disc_loss = (-tf.math.log(ys_disc + EPS)
+                            -tf.math.log(1-yt_disc + EPS))
+            else:
+                # disc_loss = 0.5*(tf.metrics.categorical_crossentropy(ys2,ys_disc)  + tf.metrics.categorical_crossentropy(yt2,yt_disc))
+                # print('2:', ys2.shape, yt2.shape,ys_disc.shape, yt_disc.shape)
+                # disc_loss = 0.5*(tf.reduce_mean(tf.metrics.mse(ys2,ys_disc))  + tf.reduce_mean(tf.metrics.mse(yt2,yt_disc)))
+                disc_loss = 0.5*(tf.metrics.mse(ys2,ys_disc)  + tf.metrics.mse(yt2,yt_disc))
+                print('disc loss 1:, ',disc_loss)
             
             task_loss = tf.reduce_mean(task_loss)
             disc_loss = tf.reduce_mean(disc_loss)
+            print('disc loss 2:, ',disc_loss)
             
             enc_loss = task_loss - self.lambda_ * disc_loss
             
             task_loss += sum(self.task_.losses)
             disc_loss += sum(self.discriminator_.losses)
             enc_loss += sum(self.encoder_.losses)
+            print('disc loss 3:, ',disc_loss)
+            print(enc_loss,task_loss,disc_loss)
             
             
         # Compute gradients
@@ -174,9 +204,9 @@ and V. Lempitsky. "Domain-adversarial training of neural networks". In JMLR, 201
         self.compiled_loss(ys, ys_pred)
         # Return a dict mapping metric names to current value
         logs = {m.name: m.result() for m in self.metrics}
-        disc_metrics = self._get_disc_metrics(ys_disc, yt_disc)
+        # disc_metrics = self._get_disc_metrics(ys_disc, yt_disc)
         logs.update({"disc_loss": disc_loss})
-        logs.update(disc_metrics)
+        # logs.update(disc_metrics)
         return logs
         
     

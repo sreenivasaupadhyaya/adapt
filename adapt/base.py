@@ -546,6 +546,7 @@ class BaseAdaptEstimator(BaseAdapt, BaseEstimator):
         -------
         estimator_ : fitted estimator
         """
+        print('fit estimator')
         X, y = check_arrays(X, y, accept_sparse=True)
         set_random_seed(random_state)
 
@@ -901,7 +902,6 @@ class BaseAdaptDeep(Model, BaseAdapt):
                  copy=True,
                  random_state=None,
                  **params):
-        
         super().__init__()
         
         self._self_setattr_tracking = False
@@ -962,7 +962,7 @@ class BaseAdaptDeep(Model, BaseAdapt):
         self : returns an instance of self
         """
         set_random_seed(self.random_state)
-            
+        print('inside fit function')
         # 1. Get Fit params
         fit_params = self._filter_params(super().fit, fit_params)
         
@@ -1016,8 +1016,9 @@ class BaseAdaptDeep(Model, BaseAdapt):
             dataset_src = X
             
         ### 2.2 Target
-        Xt, yt = self._get_target_data(Xt, yt)
+        #Xt, yt = self._get_target_data(Xt, yt)
         if not isinstance(Xt, tf.data.Dataset):
+            print('set taget 1')
             if yt is None:
                 check_array(Xt, ensure_2d=True, allow_nd=True)
                 dataset_tgt = tf.data.Dataset.from_tensor_slices(Xt)
@@ -1033,6 +1034,7 @@ class BaseAdaptDeep(Model, BaseAdapt):
                 dataset_tgt = tf.data.Dataset.zip((dataset_Xt, dataset_yt))
             
         else:
+            print('set taget 2')
             dataset_tgt = Xt
             
         # 3. Initialize networks
@@ -1350,6 +1352,7 @@ class BaseAdaptDeep(Model, BaseAdapt):
     
     def train_step(self, data):
         # Unpack the data.
+        print('train_step base')
         Xs, Xt, ys, yt = self._unpack_data(data)
         
         # Run forward pass.
@@ -1640,14 +1643,15 @@ class BaseAdaptDeep(Model, BaseAdapt):
         data_src = data[0]
         data_tgt = data[1]
         Xs = data_src[0]
-        ys = data_src[1]
+        ys,ys2 = data_src[1]
         if isinstance(data_tgt, tuple):
             Xt = data_tgt[0]
             yt = data_tgt[1]
             return Xs, Xt, ys, yt
         else:
-            Xt = data_tgt
-            return Xs, Xt, ys, None
+            Xt = data_tgt[0]
+            yt,yt2 = data_tgt[1]
+            return Xs, Xt, (ys,ys2), (yt,yt2)#None
     
     
     def _get_disc_metrics(self, ys_disc, yt_disc):
