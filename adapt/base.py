@@ -901,6 +901,7 @@ class BaseAdaptDeep(Model, BaseAdapt):
                  verbose=1,
                  copy=True,
                  random_state=None,
+                 descriminator_type = None,
                  **params):
         super().__init__()
         
@@ -913,7 +914,7 @@ class BaseAdaptDeep(Model, BaseAdapt):
         self.verbose = verbose
         self.copy = copy
         self.random_state = random_state
-        
+        self.descriminator_type = descriminator_type
         self._check_params(params)
         
         for key, value in params.items():
